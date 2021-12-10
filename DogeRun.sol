@@ -330,3 +330,30 @@ contract DividendDistributor is IDividendDistributor {
         shareholders.pop();
     }
 }
+
+contract WhaleGirl is IBEP20, Auth {
+    using SafeMath for uint256;
+
+    address bnb = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address DEAD = 0x000000000000000000000000000000000000dEaD;
+    address ZERO = 0x0000000000000000000000000000000000000000;
+
+    string constant _name = "DogeRunTest";
+    string constant _symbol = "DRunTest";
+    uint8 constant _decimals = 4;
+
+    uint256 _totalSupply = 1 * 10**9 * (10 ** _decimals);
+    uint256 public _maxTxAmount = _totalSupply * 2 / 100; // 2%
+
+    uint256 public _maxWalletToken = ( _totalSupply * 3 ) / 100;
+
+    mapping (address => uint256) _balances;
+    mapping (address => mapping (address => uint256)) _allowances;
+
+    mapping (address => bool) isFeeExempt;
+    mapping (address => bool) isTxLimitExempt;
+    mapping (address => bool) isTimelockExempt;
+    mapping (address => bool) isDividendExempt;
+
+}
