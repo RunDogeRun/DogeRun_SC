@@ -27,12 +27,14 @@ contract SparkLab is IBEP20, Ownable
     uint private _circulatingSupply =InitialSupply;
     
     //Tracks the current Taxes, different Taxes can be applied for buy/sell/transfer
-    uint public buyTax = 90;
-    uint public sellTax = 90;
+    uint public buyTax = 100;
+    uint public sellTax = 100;
     uint public transferTax = 0;
-    uint public gameRewardTax=20;
-    uint public liquidityTax=500;
-    uint public marketingTax=500;
+    uint public gameRewardTax=200;
+    uint public liquidityTax=200;
+    uint public marketingTax=300;
+    uint public buyBackTax=200;
+    uint public gameDevTax=200;
     uint constant TAX_DENOMINATOR=1000;
     uint constant MAXTAXDENOMINATOR=10;
     
@@ -152,7 +154,7 @@ contract SparkLab is IBEP20, Ownable
         //Calculates the exact token amount for each tax
         uint tokensForGameRewards=_calculateFee(amount, tax, gameRewardTax);
         //staking and liquidity Tax get treated the same, only during conversion they get split
-        uint contractToken=_calculateFee(amount, tax, marketingTax+liquidityTax);
+        uint contractToken=_calculateFee(amount, tax, marketingTax+liquidityTax+buyBackTax+gameDevTax);
         //Subtract the Taxed Tokens from the amount
         uint taxedAmount=amount-(tokensForGameRewards + contractToken);
 
@@ -211,19 +213,21 @@ contract SparkLab is IBEP20, Ownable
     }
     //Sets the taxes Burn+marketing+liquidity tax needs to equal the TAX_DENOMINATOR (1000)
     //buy, sell and transfer tax are limited by the MAXTAXDENOMINATOR
-    event OnSetTaxes(uint buy, uint sell, uint transfer_, uint burn, uint marketing,uint liquidity);
-    function SetTaxes(uint buy, uint sell, uint transfer_, uint burn, uint marketing,uint liquidity) public onlyTeam{
+    event OnSetTaxes(uint buy, uint sell, uint transfer_, uint reward, uint marketing,uint liquidity,uint dev, uint buyBack);
+    function SetTaxes(uint buy, uint sell, uint transfer_, uint reward, uint marketing,uint liquidity, uint dev, uint buyBack) public onlyTeam{
         uint maxTax=TAX_DENOMINATOR/MAXTAXDENOMINATOR;
         require(buy<=maxTax&&sell<=maxTax&&transfer_<=maxTax,"Tax exceeds maxTax");
-        require(burn+marketing+liquidity==TAX_DENOMINATOR,"Taxes don't add up to denominator");
+        require(reward+marketing+liquidity+dev+buyBack==TAX_DENOMINATOR,"Taxes don't add up to denominator");
         
         buyTax=buy;
         sellTax=sell;
         transferTax=transfer_;
         marketingTax=marketing;
         liquidityTax=liquidity;
-        gameRewardTax=burn;
-        emit OnSetTaxes(buy, sell, transfer_, burn, marketing,liquidity);
+        gameRewardTax=reward;
+        buyBackTax=buyBack;
+        gameDevTax=dev;
+        emit OnSetTaxes(buy, sell, transfer_, reward, marketing, liquidity, dev, buyBack);
     }
     
     //If liquidity is over the treshold, convert 100% of Token to Marketing BNB to avoid overliquifying
@@ -236,7 +240,7 @@ contract SparkLab is IBEP20, Ownable
     //always swaps a percentage of the LP pair balance to avoid price impact
     function _swapContractToken(bool ignoreLimits) private lockTheSwap{
         uint contractBalance=_balances[address(this)];
-        uint totalTax=liquidityTax+marketingTax;
+        uint totalTax=liquidityTax+marketingTax+gameRewardTax+gameDevTax+buyBackTax;
         //swaps each time it reaches swapTreshold of pancake pair to avoid large prize impact
         uint tokenToSwap=_balances[_pancakePairAddress]*swapTreshold/1000;
 
@@ -254,12 +258,13 @@ contract SparkLab is IBEP20, Ownable
         uint tokenForLiquidity=
         isOverLiquified()?0
         :(tokenToSwap*liquidityTax)/totalTax;
-
-        uint tokenForMarketing= tokenToSwap-tokenForLiquidity;
+        uint tokenForBuyBack=(tokenToSwap*buyBackTax)/totalTax;
+        uint tokenForGameDev=(tokenToSwap*gameDevTax)/totalTax;
+        uint tokenForMarketing=tokenToSwap-tokenForLiquidity-tokenForBuyBack-tokenForGameDev;
 
         uint LiqHalf=tokenForLiquidity/2;
         //swaps marktetingToken and the liquidity token half for BNB
-        uint swapToken=LiqHalf+tokenForMarketing;
+        uint swapToken=LiqHalf+tokenForMarketing+tokenForBuyBack+tokenForGameDev;
         //Gets the initial BNB balance, so swap won't touch any contract BNB
         uint initialBNBBalance = address(this).balance;
         _swapTokenForBNB(swapToken);
@@ -270,9 +275,15 @@ contract SparkLab is IBEP20, Ownable
             uint liqBNB = (newBNB*LiqHalf)/swapToken;
             _addLiquidity(LiqHalf, liqBNB);
         }
-        //Sends all the marketing BNB to the marketingWallet
-        (bool sent,)=marketingWallet.call{value:address(this).balance}("");
+        //Sends all the BNBS to the requred wallets
+        bool sent;
+        uint256 ContractBalance=address(this).balance;
+        (sent,)=marketingWallet.call{value:ContractBalance*42/100}("");
         sent=true;
+        (sent,)=gameDevWallet.call{value:ContractBalance*29/100}("");
+        require(sent);
+        (sent,)=buyBackWallet.call{value:ContractBalance*29/100}("");
+        require(sent);
     }
     //swaps tokens on the contract for BNB
     function _swapTokenForBNB(uint amount) private {
