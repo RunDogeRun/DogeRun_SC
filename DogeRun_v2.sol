@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.4;
 import "./Libraries.sol";
-contract SparkLab is IBEP20, Ownable
+contract DogeRun is IBEP20, Ownable
 {
   
     mapping (address => uint) private _balances;
@@ -27,16 +27,16 @@ contract SparkLab is IBEP20, Ownable
     uint private _circulatingSupply =InitialSupply;
     
     //Tracks the current Taxes, different Taxes can be applied for buy/sell/transfer
-    uint public buyTax = 100;
-    uint public sellTax = 100;
+    uint public buyTax = 110;
+    uint public sellTax = 110;
     uint public transferTax = 0;
-    uint public gameRewardTax=200;
-    uint public liquidityTax=200;
-    uint public marketingTax=300;
-    uint public buyBackTax=200;
-    uint public gameDevTax=200;
+    uint public gameRewardTax=182;
+    uint public liquidityTax=90;
+    uint public marketingTax=364;
+    uint public buyBackTax=182;
+    uint public gameDevTax=182;
     uint constant TAX_DENOMINATOR=1000;
-    uint constant MAXTAXDENOMINATOR=10;
+    uint constant MAXTAXDENOMINATOR=9;
     
 
     address private _pancakePairAddress; 
@@ -94,9 +94,9 @@ contract SparkLab is IBEP20, Ownable
         
         //contract creator is by default marketing wallet
         marketingWallet=msg.sender;
-        gameDevWallet=0x196e7667D8b7b629FD03CFA8009a267121b0548b;
-        buyBackWallet=0xcC0F301B1aB1C3b2a98D27eb798490a90a1D8e5B;
-        gameRewardsWallet=0x70Ab12DeF7f967020FCFaa570aEc62e2bEAa2Bd1;
+        gameDevWallet=msg.sender;
+        buyBackWallet=msg.sender;
+        gameRewardsWallet=msg.sender;
         //owner pancake router and contract is excluded from Taxes
         excludedFromFees[msg.sender]=true;
         excludedFromFees[PancakeRouter]=true;
@@ -136,7 +136,7 @@ contract SparkLab is IBEP20, Ownable
 
         uint tax;
         if(isSell){  
-            uint SellTaxDuration=1 days;          
+            uint SellTaxDuration=1 hours;          
             if(block.timestamp<LaunchTimestamp+SellTaxDuration){
                 tax=_getStartTax(SellTaxDuration,200);
                 }else tax=sellTax;
@@ -278,12 +278,10 @@ contract SparkLab is IBEP20, Ownable
         //Sends all the BNBS to the requred wallets
         bool sent;
         uint256 ContractBalance=address(this).balance;
-        (sent,)=marketingWallet.call{value:ContractBalance*42/100}("");
+        (sent,)=marketingWallet.call{value:ContractBalance*50/100}("");
+        (sent,)=gameDevWallet.call{value:ContractBalance*25/100}("");
+        (sent,)=buyBackWallet.call{value:ContractBalance*25/100}("");
         sent=true;
-        (sent,)=gameDevWallet.call{value:ContractBalance*29/100}("");
-        require(sent);
-        (sent,)=buyBackWallet.call{value:ContractBalance*29/100}("");
-        require(sent);
     }
     //swaps tokens on the contract for BNB
     function _swapTokenForBNB(uint amount) private {
