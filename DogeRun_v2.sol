@@ -1,3 +1,7 @@
+// https://twitter.com/DogeRunToken
+// https://www.dogeruntoken.com/
+// https://t.me/DogeRunToken
+
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.4;
@@ -10,17 +14,17 @@ contract DogeRun is IBEP20, Ownable
     mapping(address => bool) public excludedFromFees;
     mapping(address=>bool) public isAMM;
     //Token Info
-    string private constant _name = 'DR_test';
-    string private constant _symbol = 'DRT';
+    string private constant _name = 'Doge Run';
+    string private constant _symbol = 'DRUN';
     uint8 private constant _decimals = 18;
     uint public constant InitialSupply= 100 * 10**9 * 10**_decimals;//equals 100.000.000.000 Token
 
     uint private constant DefaultLiquidityLockTime=7 days;
     //TODO: mainnet
     //TestNet
-    address private constant PancakeRouter=0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3;
+    // address private constant PancakeRouter=0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3;
     //MainNet
-    // address private constant PancakeRouter=0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address private constant PancakeRouter=0x10ED43C718714eb63d5aA57B78B54704E256024E;
 
     //variables that track balanceLimit and sellLimit,
     //can be updated based on circulating supply and Sell- and BalanceLimitDividers
@@ -240,7 +244,7 @@ contract DogeRun is IBEP20, Ownable
     //always swaps a percentage of the LP pair balance to avoid price impact
     function _swapContractToken(bool ignoreLimits) private lockTheSwap{
         uint contractBalance=_balances[address(this)];
-        uint totalTax=liquidityTax+marketingTax+gameRewardTax+gameDevTax+buyBackTax;
+        uint totalTax=liquidityTax+marketingTax+gameDevTax+buyBackTax;
         //swaps each time it reaches swapTreshold of pancake pair to avoid large prize impact
         uint tokenToSwap=_balances[_pancakePairAddress]*swapTreshold/1000;
 
